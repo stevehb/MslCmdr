@@ -10,11 +10,11 @@ function init() {
     // load the background and city images
     MC.images = {};
     MC.images["city"] = Image();
-    MC.images["city"].src = "city.png";
+    MC.images["city"].src = "img/city.png";
     MC.images["bg"] = Image();
-    MC.images["bg"].src = "background.jpg";
+    MC.images["bg"].src = "img/background.jpg";
     MC.images["title"] = Image();
-    MC.images["title"].src = "title.jpg";
+    MC.images["title"].src = "img/title.jpg";
 
     // set game params
     MC.appState = "title";
@@ -24,6 +24,7 @@ function init() {
     // $("#mslcmdr").dblclick(MC.click);
     // $("#mslcmdr").click(MC.click);
     $("#mslcmdr").mousedown(MC.click);
+    $("#mslcmdr").rightMouseDown(MC.click);
 
     // draw the scene
     setTimeout(MC.iter, 10);
