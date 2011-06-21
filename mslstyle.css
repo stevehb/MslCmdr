@@ -1,0 +1,13 @@
+p.title {
+    font-family: Helvetica;
+    font-size: 48;
+    color: white;
+}
+
+p.debugOut {
+    color: white;
+}
+
+td {
+    text-align: center;
+}
