@@ -82,7 +82,7 @@ MC.iter = function() {
         x = (MC.canvas.width - MC.images.title.width) / 2;
         y = (MC.canvas.height - MC.images.title.height) / 2;
         MC.c.drawImage(MC.images.title, x, y);
-        MC.needsUpdate = false;
+        MC.needsUpdate = true;
         break;
 
     case "game":
