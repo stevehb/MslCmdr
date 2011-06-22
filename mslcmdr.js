@@ -15,11 +15,14 @@ function init() {
     MC.images["bg"].src = "img/background.jpg";
     MC.images["title"] = new Image();
     MC.images["title"].src = "img/title.jpg";
+    MC.images["explosion"] = new Image();
+    MC.images["explosion"].src = "img/explosion.png";
 
     // set game params
     MC.needsUpdate = false;
     MC.state = "title";
     MC.missleSpeed = 300;
+    MC.explosionDuration = 1500;
     MC.lastTime = new Date();
     MC.elapsedTime = new Date();
 
@@ -116,11 +119,13 @@ MC.click = function(ev) {
         MC.state = "game";
         break;
     case "game":
-        if(y > MC.silos.left.y) {
+        if(y > MC.silos.left.y || 
+           ev.which == 2) {
             break;
         }
         i = MC.playerMissles.length;
         MC.playerMissles[i] = {};
+        MC.playerMissles[i].alive = true;
         MC.playerMissles[i].src = {};
         MC.playerMissles[i].dest = {};
         MC.playerMissles[i].pos = {};
@@ -159,24 +164,57 @@ MC.click = function(ev) {
 };
 
 MC.updatePlayerMissles = function() { 
-    var i, distSqr;
+    var i, j, k, distSqr, nDeadMissles = 0;
     var maxDistTraveled = MC.missleSpeed * (MC.elapsedTime / 1000);
+    // update missle positions and mark the exploding ones
     for(i = 0; i < MC.playerMissles.length; i++) {
+        MC.playerMissles[i].pos.x += maxDistTraveled * MC.playerMissles[i].xCoef;
+        MC.playerMissles[i].pos.y += maxDistTraveled * MC.playerMissles[i].yCoef;
         distSqr = MC.calcDistSqr(MC.playerMissles[i].src.x, MC.playerMissles[i].src.y,
                                  MC.playerMissles[i].pos.x, MC.playerMissles[i].pos.y);
-        if(distSqr < MC.playerMissles[i].maxDistSqr) {
-
-            MC.playerMissles[i].pos.x += maxDistTraveled * MC.playerMissles[i].xCoef;
-            MC.playerMissles[i].pos.y += maxDistTraveled * MC.playerMissles[i].yCoef;
+        if(distSqr >= MC.playerMissles[i].maxDistSqr) {
+            MC.playerMissles[i].alive = false;
+            nDeadMissles++;
         }
-        // distance check should actually be done afterwards, and 
-        // missle turned into an explosion is dist > maxDistSqr
+    }
+    // add explosions and remove the dead missles from array
+    for(i = 0; i < nDeadMissles; i++) {
+        for(j = 0; j < MC.playerMissles.length; j++) {
+            if(MC.playerMissles[j].alive === false) {
+                k = MC.explosions.length;
+                MC.explosions[k] = {};
+                MC.explosions[k].pos = MC.playerMissles[j].dest;
+                MC.explosions[k].pos.x -= MC.images.explosion.width / 2;
+                MC.explosions[k].pos.y -= MC.images.explosion.height / 2;
+                MC.explosions[k].age = MC.explosionDuration;
+                MC.playerMissles.splice(j, 1);
+                break;
+            }
+        }
     }
 };
 
 MC.updateEnemyMissles = function() {  };
 
-MC.updateExplosions = function() { };
+MC.updateExplosions = function() { 
+    var i, j, nDeadExplosions = 0;
+    // update explosion ages
+    for(i = 0; i < MC.explosions.length; i++) {
+        MC.explosions[i].age -= MC.elapsedTime;
+        if(MC.explosions[i].age <= 0) {
+            nDeadExplosions++;
+        }
+    }
+    // remove expired explosions
+    for(i = 0; i < nDeadExplosions; i++) {
+        for(j = 0; j < MC.explosions.length; j++) {
+            if(MC.explosions[j].age <= 0) {
+                MC.explosions.splice(j, 1);
+                break;
+            }
+        }
+    }
+};
 
 MC.drawBackground = function() {
     MC.c.drawImage(MC.images.bg, 0, 0);
@@ -205,12 +243,21 @@ MC.drawPlayerMissles = function() {
 
 MC.drawEnemyMissles = function() { };
 
-MC.drawExplosions = function() { };
+MC.drawExplosions = function() { 
+    var i, alpha;
+    for(i = 0; i < MC.explosions.length; i++) {
+        alpha = MC.explosions[i].age / MC.explosionDuration;
+        MC.c.globalAlpha = alpha;
+        MC.c.drawImage(MC.images.explosion,
+                       MC.explosions[i].pos.x,
+                       MC.explosions[i].pos.y);
+    }                       
+    MC.c.globalAlpha = 1;
+};
 
 MC.calcDistSqr = function(x1, y1, x2, y2) {
     return (((y2-y1)*(y2-y1)) + ((x2-x1)*(x2-x1)));
 };
-
 
 // loggers
 MC.loge = function(str) { console.log("ERROR: " + str); };
