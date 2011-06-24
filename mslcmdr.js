@@ -21,7 +21,7 @@ function init() {
     // set game params
     MC.needsUpdate = false;
     MC.state = "title";
-    MC.missleSpeed = 300;
+    MC.missleSpeed = 1500;
     MC.explosionDuration = 1500;
     MC.lastTime = new Date();
     MC.elapsedTime = new Date();

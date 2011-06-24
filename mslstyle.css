@@ -1,7 +1,10 @@
-p.title {
+* {
     font-family: Helvetica;
-    font-size: 48;
     color: white;
+}
+
+p.title {
+    font-size: 48;
 }
 
 p.debugOut {
@@ -10,4 +13,8 @@ p.debugOut {
 
 td {
     text-align: center;
+}
+
+p.nocanvas {
+    font-size: 20;
 }
