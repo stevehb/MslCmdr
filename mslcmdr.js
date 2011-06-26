@@ -21,7 +21,7 @@ function init() {
     // set game params
     MC.needsUpdate = false;
     MC.state = "title";
-    MC.missleSpeed = 1500;
+    MC.missileSpeed = 300;
     MC.explosionDuration = 1500;
     MC.lastTime = new Date();
     MC.elapsedTime = new Date();
@@ -53,7 +53,7 @@ function init() {
     MC.cities[4].y = 450;
     MC.cities[4].alive = true;
 
-    // the missle silos
+    // the missile silos
     MC.silos = {};
     MC.silos.left = {};
     MC.silos.left.x = 75;
@@ -63,8 +63,8 @@ function init() {
     MC.silos.right.y = 500;
 
     // data structures for game data
-    MC.playerMissles = [];
-    MC.enemyMissles = [];
+    MC.playerMissiles = [];
+    MC.enemyMissiles = [];
     MC.explosions = [];
     
     // kickoff the main loop
@@ -86,13 +86,13 @@ MC.iter = function() {
         break;
 
     case "game":
-        MC.updatePlayerMissles();
-        MC.updateEnemyMissles();
+        MC.updatePlayerMissiles();
+        MC.updateEnemyMissiles();
         MC.updateExplosions();
         MC.drawBackground();
         MC.drawCities();
-        MC.drawPlayerMissles();
-        MC.drawEnemyMissles();
+        MC.drawPlayerMissiles();
+        MC.drawEnemyMissiles();
         MC.drawExplosions();
         MC.needsUpdate = true;
         break;
@@ -123,38 +123,38 @@ MC.click = function(ev) {
            ev.which == 2) {
             break;
         }
-        i = MC.playerMissles.length;
-        MC.playerMissles[i] = {};
-        MC.playerMissles[i].alive = true;
-        MC.playerMissles[i].src = {};
-        MC.playerMissles[i].dest = {};
-        MC.playerMissles[i].pos = {};
+        i = MC.playerMissiles.length;
+        MC.playerMissiles[i] = {};
+        MC.playerMissiles[i].alive = true;
+        MC.playerMissiles[i].src = {};
+        MC.playerMissiles[i].dest = {};
+        MC.playerMissiles[i].pos = {};
         if(ev.which === 1) {
-            MC.playerMissles[i].src.x = MC.silos.left.x;
-            MC.playerMissles[i].src.y = MC.silos.left.y;
-            MC.playerMissles[i].pos.x = MC.silos.left.x;
-            MC.playerMissles[i].pos.y = MC.silos.left.y;
+            MC.playerMissiles[i].src.x = MC.silos.left.x;
+            MC.playerMissiles[i].src.y = MC.silos.left.y;
+            MC.playerMissiles[i].pos.x = MC.silos.left.x;
+            MC.playerMissiles[i].pos.y = MC.silos.left.y;
         } else if(ev.which === 3) {
-            MC.playerMissles[i].src.x = MC.silos.right.x;
-            MC.playerMissles[i].src.y = MC.silos.right.y;
-            MC.playerMissles[i].pos.x = MC.silos.right.x;
-            MC.playerMissles[i].pos.y = MC.silos.right.y;
+            MC.playerMissiles[i].src.x = MC.silos.right.x;
+            MC.playerMissiles[i].src.y = MC.silos.right.y;
+            MC.playerMissiles[i].pos.x = MC.silos.right.x;
+            MC.playerMissiles[i].pos.y = MC.silos.right.y;
         }
-        MC.playerMissles[i].dest.x = x;
-        MC.playerMissles[i].dest.y = y;
-        MC.playerMissles[i].maxDistSqr = MC.calcDistSqr(
-            MC.playerMissles[i].src.x, MC.playerMissles[i].src.y,
-            MC.playerMissles[i].dest.x, MC.playerMissles[i].dest.y);
+        MC.playerMissiles[i].dest.x = x;
+        MC.playerMissiles[i].dest.y = y;
+        MC.playerMissiles[i].maxDistSqr = MC.calcDistSqr(
+            MC.playerMissiles[i].src.x, MC.playerMissiles[i].src.y,
+            MC.playerMissiles[i].dest.x, MC.playerMissiles[i].dest.y);
 
-        xDiff = (MC.playerMissles[i].dest.x - MC.playerMissles[i].src.x);
-        yDiff = (MC.playerMissles[i].dest.y - MC.playerMissles[i].src.y);
+        xDiff = (MC.playerMissiles[i].dest.x - MC.playerMissiles[i].src.x);
+        yDiff = (MC.playerMissiles[i].dest.y - MC.playerMissiles[i].src.y);
         hyp = Math.sqrt((xDiff*xDiff) + (yDiff*yDiff));
-        MC.playerMissles[i].xCoef = xDiff / hyp;
-        MC.playerMissles[i].yCoef = yDiff / hyp;
+        MC.playerMissiles[i].xCoef = xDiff / hyp;
+        MC.playerMissiles[i].yCoef = yDiff / hyp;
 
-        MC.logi("added missle " + i + " from " + MC.playerMissles[i].src.x + ", " +
-                MC.playerMissles[i].src.y + " to " + MC.playerMissles[i].dest.x +
-                ", " + MC.playerMissles[i].dest.y);
+        MC.logi("added missile " + i + " from " + MC.playerMissiles[i].src.x + ", " +
+                MC.playerMissiles[i].src.y + " to " + MC.playerMissiles[i].dest.x +
+                ", " + MC.playerMissiles[i].dest.y);
         break;
     default:
         MC.loge("in unknown state: " + MC.state);
@@ -163,38 +163,38 @@ MC.click = function(ev) {
     return false;
 };
 
-MC.updatePlayerMissles = function() { 
-    var i, j, k, distSqr, nDeadMissles = 0;
-    var maxDistTraveled = MC.missleSpeed * (MC.elapsedTime / 1000);
-    // update missle positions and mark the exploding ones
-    for(i = 0; i < MC.playerMissles.length; i++) {
-        MC.playerMissles[i].pos.x += maxDistTraveled * MC.playerMissles[i].xCoef;
-        MC.playerMissles[i].pos.y += maxDistTraveled * MC.playerMissles[i].yCoef;
-        distSqr = MC.calcDistSqr(MC.playerMissles[i].src.x, MC.playerMissles[i].src.y,
-                                 MC.playerMissles[i].pos.x, MC.playerMissles[i].pos.y);
-        if(distSqr >= MC.playerMissles[i].maxDistSqr) {
-            MC.playerMissles[i].alive = false;
-            nDeadMissles++;
+MC.updatePlayerMissiles = function() { 
+    var i, j, k, distSqr, nDeadMissiles = 0;
+    var maxDistTraveled = MC.missileSpeed * (MC.elapsedTime / 1000);
+    // update missile positions and mark the exploding ones
+    for(i = 0; i < MC.playerMissiles.length; i++) {
+        MC.playerMissiles[i].pos.x += maxDistTraveled * MC.playerMissiles[i].xCoef;
+        MC.playerMissiles[i].pos.y += maxDistTraveled * MC.playerMissiles[i].yCoef;
+        distSqr = MC.calcDistSqr(MC.playerMissiles[i].src.x, MC.playerMissiles[i].src.y,
+                                 MC.playerMissiles[i].pos.x, MC.playerMissiles[i].pos.y);
+        if(distSqr >= MC.playerMissiles[i].maxDistSqr) {
+            MC.playerMissiles[i].alive = false;
+            nDeadMissiles++;
         }
     }
-    // add explosions and remove the dead missles from array
-    for(i = 0; i < nDeadMissles; i++) {
-        for(j = 0; j < MC.playerMissles.length; j++) {
-            if(MC.playerMissles[j].alive === false) {
+    // add explosions and remove the dead missiles from array
+    for(i = 0; i < nDeadMissiles; i++) {
+        for(j = 0; j < MC.playerMissiles.length; j++) {
+            if(MC.playerMissiles[j].alive === false) {
                 k = MC.explosions.length;
                 MC.explosions[k] = {};
-                MC.explosions[k].pos = MC.playerMissles[j].dest;
+                MC.explosions[k].pos = MC.playerMissiles[j].dest;
                 MC.explosions[k].pos.x -= MC.images.explosion.width / 2;
                 MC.explosions[k].pos.y -= MC.images.explosion.height / 2;
                 MC.explosions[k].age = MC.explosionDuration;
-                MC.playerMissles.splice(j, 1);
+                MC.playerMissiles.splice(j, 1);
                 break;
             }
         }
     }
 };
 
-MC.updateEnemyMissles = function() {  };
+MC.updateEnemyMissiles = function() {  };
 
 MC.updateExplosions = function() { 
     var i, j, nDeadExplosions = 0;
@@ -229,19 +229,19 @@ MC.drawCities = function() {
     }
 };
 
-MC.drawPlayerMissles = function() {
+MC.drawPlayerMissiles = function() {
     var i;
     MC.c.beginPath();
     MC.c.strokeStyle = '#F00';
     MC.c.lineWidth = 1;
-    for(i = 0; i < MC.playerMissles.length; i++) {
-        MC.c.moveTo(MC.playerMissles[i].src.x, MC.playerMissles[i].src.y);
-        MC.c.lineTo(MC.playerMissles[i].pos.x, MC.playerMissles[i].pos.y);
+    for(i = 0; i < MC.playerMissiles.length; i++) {
+        MC.c.moveTo(MC.playerMissiles[i].src.x, MC.playerMissiles[i].src.y);
+        MC.c.lineTo(MC.playerMissiles[i].pos.x, MC.playerMissiles[i].pos.y);
     }
     MC.c.stroke();
 };
 
-MC.drawEnemyMissles = function() { };
+MC.drawEnemyMissiles = function() { };
 
 MC.drawExplosions = function() { 
     var i, alpha;
