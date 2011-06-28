@@ -21,10 +21,15 @@ function init() {
     // set game params
     MC.needsUpdate = false;
     MC.state = "title";
-    MC.missileSpeed = 300;
-    MC.explosionDuration = 1500;
+    MC.missileSpeed = 1500;
+    MC.explosionDuration = 1000;
     MC.lastTime = new Date();
     MC.elapsedTime = new Date();
+
+    // enemy missiles
+    MC.enemyMissileDelay = 1000;
+    MC.enemyMissileAccumDelay = 0;
+    MC.enemyMissileSpeed = 100;
 
     // add mouse capture
     $("#mslcmdr").mousedown(MC.click);
@@ -109,10 +114,7 @@ MC.click = function(ev) {
     var bb = MC.canvas.getBoundingClientRect();
     var x = (ev.clientX - bb.left) * (MC.canvas.width / bb.width);
     var y = (ev.clientY - bb.top) * (MC.canvas.height / bb.height);
-    MC.logi("click: " + (ev.which === 1 ? "left" : (
-                         ev.which === 2 ? "middle" : (
-                         ev.which === 3 ? "right" : "other"))) +
-                         " button at (" + x + "," + y + ")");
+
     // do any state changes and call iter
     switch(MC.state) {
     case "title":
@@ -151,10 +153,6 @@ MC.click = function(ev) {
         hyp = Math.sqrt((xDiff*xDiff) + (yDiff*yDiff));
         MC.playerMissiles[i].xCoef = xDiff / hyp;
         MC.playerMissiles[i].yCoef = yDiff / hyp;
-
-        MC.logi("added missile " + i + " from " + MC.playerMissiles[i].src.x + ", " +
-                MC.playerMissiles[i].src.y + " to " + MC.playerMissiles[i].dest.x +
-                ", " + MC.playerMissiles[i].dest.y);
         break;
     default:
         MC.loge("in unknown state: " + MC.state);
@@ -194,7 +192,68 @@ MC.updatePlayerMissiles = function() {
     }
 };
 
-MC.updateEnemyMissiles = function() {  };
+MC.updateEnemyMissiles = function() { 
+    var i, j, distSqr, nDeadMissiles = 0;
+    var maxDistTraveled = MC.enemyMissileSpeed * (MC.elapsedTime / 1000);
+    var city, xDiff, yDiff, hyp;
+
+    // add to missile delay and add another if it's time
+    MC.enemyMissileAccumDelay += MC.elapsedTime;
+    if(MC.enemyMissileAccumDelay > MC.enemyMissileDelay) {
+        i = MC.enemyMissiles.length;
+        MC.enemyMissiles[i] = {};
+        MC.enemyMissiles[i].src = {};
+        MC.enemyMissiles[i].pos = {};
+        MC.enemyMissiles[i].dest = {};
+        MC.enemyMissiles[i].src.x = Math.floor(Math.random() * MC.canvas.width);
+        MC.enemyMissiles[i].src.y = 0;
+        MC.enemyMissiles[i].pos.x = MC.enemyMissiles[i].src.x;
+        MC.enemyMissiles[i].pos.y = MC.enemyMissiles[i].src.y;
+        city = Math.floor(Math.random() * MC.cities.length);
+        MC.enemyMissiles[i].dest.x = MC.cities[city].x + (MC.images.city.width / 2);
+        MC.enemyMissiles[i].dest.y = MC.cities[city].y + (MC.images.city.height / 2);
+        MC.enemyMissiles[i].maxDistSqr = MC.calcDistSqr(
+            MC.enemyMissiles[i].src.x, MC.enemyMissiles[i].src.y,
+            MC.enemyMissiles[i].dest.x, MC.enemyMissiles[i].dest.y);
+
+        xDiff = (MC.enemyMissiles[i].dest.x - MC.enemyMissiles[i].src.x);
+        yDiff = (MC.enemyMissiles[i].dest.y - MC.enemyMissiles[i].src.y);
+        hyp = Math.sqrt((xDiff*xDiff) + (yDiff*yDiff));
+        MC.enemyMissiles[i].xCoef = xDiff / hyp;
+        MC.enemyMissiles[i].yCoef = yDiff / hyp;
+        MC.enemyMissiles[i].hit = false;
+        MC.enemyMissileAccumDelay = 0;
+    }
+
+    // update missile positions and mark the ones that have hit their target
+    for(i = 0; i < MC.enemyMissiles.length; i++) {
+        MC.enemyMissiles[i].pos.x += maxDistTraveled * MC.enemyMissiles[i].xCoef;
+        MC.enemyMissiles[i].pos.y += maxDistTraveled * MC.enemyMissiles[i].yCoef;
+        distSqr = MC.calcDistSqr(MC.enemyMissiles[i].src.x, MC.enemyMissiles[i].src.y,
+                                 MC.enemyMissiles[i].pos.x, MC.enemyMissiles[i].pos.y);
+        if(distSqr >= MC.enemyMissiles[i].maxDistSqr) {
+            MC.enemyMissiles[i].hit = true;
+            nDeadMissiles++;
+        }
+    }
+
+    // add explosions and remove the dead missiles from array
+    for(i = 0; i < nDeadMissiles; i++) {
+        for(j = 0; j < MC.enemyMissiles.length; j++) {
+            if(MC.enemyMissiles[j].hit === true) {
+                k = MC.explosions.length;
+                MC.explosions[k] = {};
+                MC.explosions[k].pos = MC.enemyMissiles[j].dest;
+                MC.explosions[k].pos.x -= MC.images.explosion.width / 2;
+                MC.explosions[k].pos.y -= MC.images.explosion.height / 2;
+                MC.explosions[k].age = MC.explosionDuration;
+                MC.enemyMissiles.splice(j, 1);
+                break;
+            }
+        }
+    }
+
+};
 
 MC.updateExplosions = function() { 
     var i, j, nDeadExplosions = 0;
@@ -241,7 +300,17 @@ MC.drawPlayerMissiles = function() {
     MC.c.stroke();
 };
 
-MC.drawEnemyMissiles = function() { };
+MC.drawEnemyMissiles = function() { 
+    var i;
+    MC.c.beginPath();
+    MC.c.strokeStyle = '#0FF';
+    MC.c.lineWidth = 1;
+    for(i = 0; i < MC.enemyMissiles.length; i++) {
+        MC.c.moveTo(MC.enemyMissiles[i].src.x, MC.enemyMissiles[i].src.y);
+        MC.c.lineTo(MC.enemyMissiles[i].pos.x, MC.enemyMissiles[i].pos.y);
+    }
+    MC.c.stroke();
+};
 
 MC.drawExplosions = function() { 
     var i, alpha;
